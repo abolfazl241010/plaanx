@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>خوارزمی ۴۰۴ – برنامه‌ریز هوشمند درسی</title>
+  <script src="https://cdn.tailwindcss.com/3.4.14"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #7c3aed;
+      --primary-dark: #5b21b6;
+      --accent: #ec4899;
+      --glass-bg: rgba(255, 255, 255, 0.15);
+      --glass-border: rgba(255, 255, 255, 0.2);
+    }
+    body {
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+      background-attachment: fixed;
+      color: #f3e8ff;
+      min-height: 100vh;
+    }
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+      border-radius: 1.5rem;
+    }
+    .neu-input {
+      background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(0,0,0,0.2));
+      box-shadow: inset 3px 3px 6px rgba(0,0,0,0.3), inset -3px -3px 6px rgba(255,255,255,0.05);
+      border: none;
+    }
+    .subject-row {
+      display: grid;
+      grid-template-columns: 3fr 1.2fr 1.2fr 110px;
+      gap: 1.25rem;
+      align-items: center;
+    }
+    @media (max-width: 640px) {
+      .subject-row { grid-template-columns: 1fr 1fr; gap: 1rem; }
+      .subject-row > *:nth-child(n+3) { grid-column: span 2; }
+    }
+    .chart-container {
+      position: relative;
+      height: 340px;
+      width: 100%;
+    }
+    @media (max-width: 640px) {
+      .chart-container { height: 280px; }
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; padding: 10px; }
+      .no-print { display: none !important; }
+      .glass { background: white !important; color: black !important; border: 1px solid #000 !important; box-shadow: none !important; backdrop-filter: none !important; }
+      table, th, td { border: 1px solid black !important; color: black !important; padding: 8px !important; }
+      h2, h4 { color: black !important; }
+      .text-center { text-align: center !important; }
+      .font-bold { font-weight: bold !important; }
+      .text-purple-200 { color: #000 !important; } /* برای خوانایی */
+    }
+  </style>
+</head>
+<body class="py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-6xl mx-auto space-y-12">
+
+    <!-- لاگین -->
+    <div id="loginSection" class="glass p-8 md:p-12">
+      <h2 class="text-4xl font-bold text-center mb-8">ورود / ثبت‌نام</h2>
+      <form id="loginForm" class="space-y-6">
+        <input type="text" id="username" placeholder="نام کاربری" class="neu-input w-full p-6 rounded-3xl text-white text-xl focus:outline-none focus:ring-4 focus:ring-purple-500/60 transition" required/>
+        <input type="password" id="password" placeholder="رمز عبور" class="neu-input w-full p-6 rounded-3xl text-white text-xl focus:outline-none focus:ring-4 focus:ring-purple-500/60 transition" required/>
+        <button type="submit" class="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white text-3xl font-black py-6 rounded-4xl shadow-2xl transition transform hover:scale-105">
+          ورود
+        </button>
+      </form>
+      <p class="text-center mt-4 opacity-80">نام کاربری جدید = ثبت‌نام خودکار</p>
+    </div>
+
+    <!-- محتوای اصلی -->
+    <div id="mainContent" class="hidden">
+      <header class="text-center">
+        <h1 class="text-6xl md:text-7xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-fuchsia-300 to-pink-300">
+          خوارزمی ۴۰۴
+        </h1>
+        <p class="mt-5 text-2xl md:text-3xl opacity-90">سلام <span id="currentUserName"></span></p>
+      </header>
+
+      <div class="glass p-8 md:p-12">
+        <form id="studyForm" class="space-y-10">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label class="block text-xl font-bold mb-3">پایه تحصیلی</label>
+              <select id="grade" class="neu-input w-full p-5 rounded-2xl text-white text-lg focus:outline-none focus:ring-4 focus:ring-purple-500/60 transition">
+                <option value="نهم">نهم – انتخاب رشته</option>
+                <option value="دهم">دهم</option>
+                <option value="یازدهم">یازدهم</option>
+                <option value="دوازدهم">دوازدهم – کنکور</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xl font-bold mb-3">ساعات مطالعه روزانه</label>
+              <input type="number" id="dailyHours" min="2" max="14" value="5.5" step="0.5" class="neu-input w-full p-5 rounded-2xl text-white text-lg text-center focus:outline-none focus:ring-4 focus:ring-purple-500/60 transition"/>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-5">
+              <label class="block text-xl font-bold">دروس و درصد تسلط</label>
+              <button type="button" id="addSubjectBtn" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-7 py-3 rounded-2xl font-bold shadow-xl transition transform hover:scale-110 flex items-center gap-2">
+                <i class="fas fa-plus"></i> درس جدید
+              </button>
+            </div>
+            <div id="subjectsContainer" class="space-y-5"></div>
+          </div>
+
+          <button type="submit" class="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white text-2xl font-black py-6 rounded-3xl shadow-2xl transition transform hover:scale-105">
+            برنامه هوشمند رو بساز!
+          </button>
+        </form>
+
+        <div id="previousPrograms" class="mt-10 space-y-4"></div>
+      </div>
+
+      <div id="result" class="hidden space-y-10">
+        <h2 class="text-5xl font-black text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-purple-400">برنامه پیشنهادی</h2>
+
+        <div class="text-center text-xl opacity-90 mb-6">
+          برنامه هفتگی از امروز تا ۷ روز آینده
+        </div>
+
+        <!-- فقط این بخش چاپ می‌شود -->
+        <div id="printArea" class="space-y-8">
+          <div class="glass overflow-x-auto rounded-2xl hidden md:block">
+            <table id="scheduleTable" class="w-full text-center"></table>
+          </div>
+
+          <div id="scheduleCards" class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:hidden"></div>
+        </div>
+
+        <button id="printBtn" class="w-full no-print bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white py-5 rounded-3xl font-bold text-xl shadow-2xl transition transform hover:scale-105">
+          چاپ برنامه
+        </button>
+
+        <!-- بخش گزارش و چارت‌ها (در صفحه نمایش هست، اما چاپ نمی‌شود) -->
+        <div class="glass p-8 no-print">
+          <h3 class="text-4xl font-bold text-center mb-8">گزارش امروز + تحلیل</h3>
+          <div id="reportSection" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mb-8"></div>
+          <button id="saveReportBtn" class="w-full bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 to-rose-600 text-white py-5 rounded-3xl font-bold text-xl shadow-2xl transition transform hover:scale-105">
+            ثبت گزارش و بروزرسانی
+          </button>
+
+          <div class="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div class="glass p-6">
+              <h4 class="text-2xl font-bold text-center mb-6">میزان ضعف فعلی دروس</h4>
+              <div class="chart-container">
+                <canvas id="weaknessChart"></canvas>
+              </div>
+            </div>
+            <div class="glass p-6">
+              <h4 class="text-2xl font-bold text-center mb-6">روند پیشرفت کلی</h4>
+              <div class="chart-container">
+                <canvas id="progressChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <p id="reportFeedback" class="mt-10 text-center text-3xl font-bold"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // کد جاوااسکریپت همان قبلی است (تغییر نکرد، فقط استایل چاپ اصلاح شد)
+    const usersKey = 'kharazmiUsers';
+    let users = JSON.parse(localStorage.getItem(usersKey)) || {};
+    let currentUser = null;
+    let data = { subjects: [], programs: [], progressHistory: [] };
+
+    document.getElementById('loginForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!username || !password) return alert('نام کاربری و رمز رو وارد کن!');
+      
+      if (!users[username]) {
+        users[username] = { password, data: { subjects: [], programs: [], progressHistory: [] } };
+        localStorage.setItem(usersKey, JSON.stringify(users));
+        alert('حساب جدید ساخته شد!');
+      } else if (users[username].password !== password) {
+        return alert('رمز اشتباهه!');
+      }
+
+      currentUser = username;
+      data = users[username].data || { subjects: [], programs: [], progressHistory: [] };
+      if (!Array.isArray(data.programs)) data.programs = [];
+      if (!Array.isArray(data.subjects)) data.subjects = [];
+      if (!Array.isArray(data.progressHistory)) data.progressHistory = [];
+
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('mainContent').classList.remove('hidden');
+      document.getElementById('currentUserName').textContent = username;
+
+      const container = document.getElementById('subjectsContainer');
+      container.innerHTML = '';
+      if (data.subjects.length) {
+        data.subjects.forEach(s => addSubjectRow(s.name, s.mastery));
+      } else {
+        ['ریاضی', 'فیزیک', 'شیمی', 'زیست', 'ادبیات', 'عربی'].forEach(n => addSubjectRow(n));
+      }
+      renderPreviousPrograms();
+      renderReportSection();
+      renderCharts();
+    });
+
+    function saveUserData() {
+      if (currentUser) {
+        users[currentUser].data = data;
+        localStorage.setItem(usersKey, JSON.stringify(users));
+      }
+    }
+
+    function addSubjectRow(name = '', mastery = 60) {
+      const div = document.createElement('div');
+      div.className = 'subject-row glass p-6 rounded-2xl';
+      div.innerHTML = `
+        <input type="text" value="${name}" class="neu-input p-5 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg" required/>
+        <input type="number" value="${mastery}" min="0" max="100" class="neu-input p-5 rounded-2xl text-white text-center focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg" required/>
+        <button type="button" class="removeSubject bg-rose-500/70 hover:bg-rose-600 text-white px-6 py-4 rounded-2xl transition">
+          <i class="fas fa-trash"></i>
+        </button>
+      `;
+      document.getElementById('subjectsContainer').appendChild(div);
+      div.querySelector('.removeSubject').onclick = () => div.remove();
+    }
+
+    document.getElementById('addSubjectBtn').onclick = () => addSubjectRow();
+
+    document.getElementById('studyForm').addEventListener('submit', e => {
+      e.preventDefault();
+
+      const dailyHours = parseFloat(document.getElementById('dailyHours').value) || 5;
+      const totalMin = dailyHours * 60;
+
+      const subjects = [];
+      document.querySelectorAll('#subjectsContainer .subject-row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const name = inputs[0].value.trim();
+        const mastery = parseInt(inputs[1].value) || 50;
+        if (name) subjects.push({name, mastery});
+      });
+
+      if (subjects.length === 0) return alert('حداقل یک درس وارد کن داداش!');
+
+      let totalWeakness = subjects.reduce((sum, s) => sum + (100 - s.mastery), 0);
+      if (totalWeakness === 0) totalWeakness = subjects.length * 50;
+
+      const schedule = subjects.map(s => {
+        let weight = (100 - s.mastery) / totalWeakness;
+        let minutes = Math.round(totalMin * weight);
+        if (minutes < 45) minutes = 45;
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return {name: s.name, time: `${h ? h + ' ساعت ' : ''}${m ? m + ' دقیقه' : ''}`.trim()};
+      });
+
+      data.subjects = subjects;
+
+      const today = new Date();
+      const end = new Date(today);
+      end.setDate(end.getDate() + 6);
+
+      const newProgram = {
+        createdAt: new Date().toISOString(),
+        startDate: today.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+        schedule
+      };
+      data.programs.push(newProgram);
+      saveUserData();
+
+      renderSchedule(schedule);
+      renderPreviousPrograms();
+      renderReportSection(subjects);
+      renderCharts(subjects);
+      document.getElementById('result').classList.remove('hidden');
+      document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    function renderSchedule(schedule) {
+      const table = document.getElementById('scheduleTable');
+      table.innerHTML = '';
+      const days = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+      let html = '<thead><tr><th>درس</th>';
+      days.forEach(day => html += `<th>${day}</th>`);
+      html += '</tr></thead><tbody>';
+      schedule.forEach(item => {
+        html += `<tr><td class="font-bold text-purple-200">${item.name}</td>`;
+        days.forEach(() => html += `<td>${item.time}</td>`);
+        html += '</tr>';
+      });
+      html += '</tbody>';
+      table.innerHTML = html;
+
+      const cards = document.getElementById('scheduleCards');
+      cards.innerHTML = '';
+      days.forEach(day => {
+        const card = document.createElement('div');
+        card.className = 'glass p-6 rounded-2xl';
+        card.innerHTML = `<h4 class="text-xl font-bold mb-4 text-center">${day}</h4>`;
+        schedule.forEach(s => {
+          card.innerHTML += `<p class="text-lg mb-2"><span class="font-medium">${s.name}:</span> ${s.time}</p>`;
+        });
+        cards.appendChild(card);
+      });
+    }
+
+    function renderPreviousPrograms() {
+      const cont = document.getElementById('previousPrograms');
+      cont.innerHTML = '';
+      if (!data.programs?.length) return;
+
+      const title = document.createElement('h3');
+      title.className = 'text-2xl font-bold mb-4';
+      title.textContent = 'برنامه‌های قبلی';
+      cont.appendChild(title);
+
+      data.programs.forEach((p, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white py-4 rounded-2xl font-bold transition transform hover:scale-105';
+        btn.textContent = `برنامه ${i+1} • ${new Date(p.startDate).toLocaleDateString('fa-IR')} تا ${new Date(p.endDate).toLocaleDateString('fa-IR')}`;
+        btn.onclick = () => {
+          renderSchedule(p.schedule);
+          document.getElementById('result').classList.remove('hidden');
+        };
+        cont.appendChild(btn);
+      });
+    }
+
+    function renderReportSection(subjects = []) {
+      const section = document.getElementById('reportSection');
+      section.innerHTML = '';
+      subjects.forEach(s => {
+        const label = document.createElement('label');
+        label.className = 'glass p-5 rounded-2xl flex items-center justify-center gap-4 cursor-pointer hover:bg-white/10 transition text-lg font-medium';
+        label.innerHTML = `
+          <input type="checkbox" class="report-checkbox w-7 h-7 text-purple-500 rounded focus:ring-purple-400"/>
+          <span>${s.name}</span>
+        `;
+        section.appendChild(label);
+      });
+    }
+
+    let weaknessChart, progressChart;
+    function renderCharts(subjects = []) {
+      const weaknessCtx = document.getElementById('weaknessChart')?.getContext('2d');
+      if (weaknessCtx) {
+        weaknessChart?.destroy();
+        weaknessChart = new Chart(weaknessCtx, {
+          type: 'bar',
+          data: {
+            labels: subjects.map(s => s.name),
+            datasets: [{
+              label: 'ضعف',
+              data: subjects.map(s => 100 - s.mastery),
+              backgroundColor: 'rgba(236, 72, 153, 0.7)',
+              borderColor: '#ec4899',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      const progressCtx = document.getElementById('progressChart')?.getContext('2d');
+      if (progressCtx) {
+        progressChart?.destroy();
+        const labels = data.progressHistory.map(h => h.date);
+        const values = data.progressHistory.map(h => h.percent);
+        progressChart = new Chart(progressCtx, {
+          type: 'line',
+          data: {
+            labels: labels.length ? labels : ['بدون گزارش'],
+            datasets: [{
+              label: 'پیشرفت روزانه (%)',
+              data: values.length ? values : [0],
+              borderColor: '#c084fc',
+              backgroundColor: 'rgba(192, 132, 252, 0.2)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } }
+          }
+        });
+      }
+    }
+
+    document.getElementById('saveReportBtn').onclick = () => {
+      const checked = document.querySelectorAll('.report-checkbox:checked').length;
+      const total = document.querySelectorAll('.report-checkbox').length;
+      if (total === 0) return;
+
+      const percent = Math.round((checked / total) * 100);
+      const todayJalali = new Date().toLocaleDateString('fa-IR');
+      data.progressHistory.push({ date: todayJalali, percent });
+      saveUserData();
+
+      let msg = percent >= 85 ? 'عالی بودی ستاره! 🌟' :
+                percent >= 60 ? 'خوب بود 💪' :
+                'امروز کم بود... فردا جبران کن 🔥';
+      document.getElementById('reportFeedback').innerHTML = `
+        <span class="text-6xl block mb-4">${percent}%</span>
+        ${msg}
+      `;
+
+      renderCharts(data.subjects);
+    };
+
+    document.getElementById('printBtn').onclick = () => window.print();
+  </script>
+</body>
+</html>
